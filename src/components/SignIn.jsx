@@ -1,9 +1,14 @@
 import { Formik } from "formik";
 import { Pressable, StyleSheet, View } from "react-native";
 import * as yup from "yup";
+import React from "react";
+import useSignIn from "../hooks/useSignIn";
+import { useNavigate } from "react-router-native";
+import { useApolloClient } from "@apollo/client";
 
 import FormikTextInput from "./FormikTextInput";
 import Text from "./Text";
+import useAuthStorage from "../hooks/useAuthStorage";
 
 const initialValues = {
   username: "",
@@ -29,14 +34,39 @@ const styles = StyleSheet.create({
 const validationSchema = yup.object().shape({
   username: yup
     .string()
-    .min(5, "Length of username must be greater than or equal to 5 characters")
+    .min(3, "Length of username must be greater than or equal to 3 characters")
     .required("Username is required"),
   password: yup
     .string()
-    .min(5, "Password must be greater than or equal to 5 characters")
+    .min(3, "Password must be greater than or equal to 3 characters")
     .required("Password is required"),
 });
+
 export default function SignIn() {
+  const { data, loading, error, signIn } = useSignIn();
+  const navigate = useNavigate()
+  const authStorage = useAuthStorage();
+  const apolloClient = useApolloClient();
+
+  const onSubmit = async (values) => {
+    try {
+      signIn(values);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  React.useEffect( () => {
+    (async () => {
+      if (data) {
+        const { accessToken, user } = data.authenticate;
+        await authStorage.setAccessToken(accessToken)
+        apolloClient.resetStore()
+        navigate('/')
+      }
+    })()
+  }, [data]);
+
   return (
     <Formik
       initialValues={initialValues}
